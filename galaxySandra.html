@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sandra's Realistic Galaxy Simulation</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #floating-text {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #eb9afd;
+      font-size: 2.5em;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(255,255,255,0.8);
+      pointer-events: none;
+      animation: floatText 5s infinite ease-in-out;
+    }
+    @keyframes floatText {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="floating-text">★ Galaxy of Sandra and Kenichi ★</div>
+  <canvas id="galaxy"></canvas>
+  <script>
+    const canvas = document.getElementById("galaxy");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    let mouseX = centerX;
+    let mouseY = centerY;
+
+    const stars = [];
+    for (let i = 0; i < 1500; i++) {
+      const radius = Math.random() * 500;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.00005 + Math.random() * 0.0002;
+      const size = Math.random() * 1.5;
+      const hue = 180 + Math.random() * 120;
+      stars.push({ radius, angle, speed, size, hue });
+    }
+
+    const planets = [
+      { orbitRadius: 200, angle: Math.random() * Math.PI * 2, speed: 0.0001, size: 6, color: "#3388ff", hasRing: true, hasMoon: true },
+      { orbitRadius: 300, angle: Math.random() * Math.PI * 2, speed: 0.00007, size: 8, color: "#ffaa33", hasRing: false, hasMoon: false },
+      { orbitRadius: 400, angle: Math.random() * Math.PI * 2, speed: 0.00005, size: 12, color: "#cc66cc", hasRing: true, hasMoon: false },
+      { orbitRadius: 500, angle: Math.random() * Math.PI * 2, speed: 0.00004, size: 15, color: "#ff3333", hasRing: false, hasMoon: true },
+      { orbitRadius: 600, angle: Math.random() * Math.PI * 2, speed: 0.00003, size: 20, color: "#33ff99", hasRing: true, hasMoon: true },
+      { orbitRadius: 700, angle: Math.random() * Math.PI * 2, speed: 0.00002, size: 24, color: "#66ccff", hasRing: true, hasMoon: false },
+      { orbitRadius: 800, angle: Math.random() * Math.PI * 2, speed: 0.000015, size: 28, color: "#ffcc00", hasRing: false, hasMoon: true },
+      { orbitRadius: 900, angle: Math.random() * Math.PI * 2, speed: 0.00001, size: 30, color: "#ff66aa", hasRing: true, hasMoon: true },
+      { orbitRadius: 1000, angle: Math.random() * Math.PI * 2, speed: 0.000009, size: 34, color: "#33ffff", hasRing: true, hasMoon: false },
+      { orbitRadius: 1100, angle: Math.random() * Math.PI * 2, speed: 0.000008, size: 38, color: "#ffffff", hasRing: true, hasMoon: true },
+      { orbitRadius: 1200, angle: Math.random() * Math.PI * 2, speed: 0.000007, size: 42, color: "#ff99ff", hasRing: true, hasMoon: true },
+      { orbitRadius: 1300, angle: Math.random() * Math.PI * 2, speed: 0.000006, size: 45, color: "#00ffcc", hasRing: true, hasMoon: true },
+      { orbitRadius: 1400, angle: Math.random() * Math.PI * 2, speed: 0.000005, size: 50, color: "#ff4444", hasRing: true, hasMoon: true }
+    ];
+
+    let comet = {
+      x: -100,
+      y: 100,
+      vx: 2.5,
+      vy: -0.3,
+      tail: []
+    };
+
+    function drawCore() {
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 80);
+      gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+      gradient.addColorStop(1, "rgba(200, 200, 255, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 80, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawNebulae() {
+      for (let i = 0; i < 100; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const size = Math.random() * 80 + 40;
+        const alpha = Math.random() * 0.05;
+        const hue = 200 + Math.random() * 100;
+        ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawPlanets() {
+      for (let planet of planets) {
+        planet.angle += planet.speed;
+        const x = Math.cos(planet.angle) * planet.orbitRadius + centerX;
+        const y = Math.sin(planet.angle) * planet.orbitRadius + centerY;
+
+        ctx.strokeStyle = "rgba(255,255,255,0.05)";
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, planet.orbitRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = planet.color;
+        ctx.beginPath();
+        ctx.arc(x, y, planet.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (planet.hasRing) {
+          ctx.strokeStyle = "rgba(255,255,255,0.2)";
+          ctx.beginPath();
+          ctx.ellipse(x, y, planet.size + 6, planet.size + 3, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        if (planet.hasMoon) {
+          const moonAngle = planet.angle * 3;
+          const moonX = x + Math.cos(moonAngle) * (planet.size + 6);
+          const moonY = y + Math.sin(moonAngle) * (planet.size + 6);
+          ctx.fillStyle = "#ccc";
+          ctx.beginPath();
+          ctx.arc(moonX, moonY, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawStars() {
+      for (let star of stars) {
+        star.angle += star.speed;
+        const x = Math.cos(star.angle) * star.radius + centerX;
+        const y = Math.sin(star.angle) * star.radius + centerY;
+
+        ctx.fillStyle = `hsla(${star.hue}, 100%, 75%, 0.8)`;
+        ctx.beginPath();
+        ctx.arc(x, y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawComet() {
+      comet.tail.push({ x: comet.x, y: comet.y });
+      if (comet.tail.length > 30) comet.tail.shift();
+
+      for (let i = 0; i < comet.tail.length; i++) {
+        const t = comet.tail[i];
+        ctx.fillStyle = `rgba(255,255,255,${i / comet.tail.length})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      comet.x += comet.vx;
+      comet.y += comet.vy;
+      if (comet.x > canvas.width + 100) {
+        comet.x = -100;
+        comet.y = Math.random() * canvas.height;
+        comet.tail = [];
+      }
+
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.arc(comet.x, comet.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function animate() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawCore();
+      drawNebulae();
+      drawPlanets();
+      drawStars();
+      drawComet();
+
+      requestAnimationFrame(animate);
+    }
+
+    canvas.addEventListener('mousemove', function(event) {
+      mouseX = event.clientX;
+      mouseY = event.clientY;
+
+      const sparkleSize = Math.random() * 2 + 1;
+      ctx.fillStyle = `rgba(255,255,255,0.8)`;
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, sparkleSize, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    animate();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
